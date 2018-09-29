@@ -65,4 +65,14 @@ using LinearAlgebra
         @test norm(z) == (11.832159566199232,)
         @test norm(normalize!(z))[1] ≈ 1.0
     end
+
+    @testset "affine_chart" begin
+        z = normalize(embed([2.0, 3, 4, 5, 6, 7], (2, 3, 1)))
+        @test affine_chart(z) == [2.0, 3, 4, 5, 6, 7]
+        @test affine_chart!(zeros(6), z) == [2.0, 3, 4, 5, 6, 7]
+
+        z = normalize(embed([2.0, 3, 4, 5, 6, 7]))
+        @test affine_chart(z) ≈ [2.0, 3, 4, 5, 6, 7]
+        @test affine_chart!(zeros(6), z) ≈ [2.0, 3, 4, 5, 6, 7]
+    end
 end
