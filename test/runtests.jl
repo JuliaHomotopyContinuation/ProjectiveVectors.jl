@@ -1,5 +1,6 @@
 using Test
 using ProjectiveVectors
+using LinearAlgebra
 
 @testset "ProjectiveVectors" begin
     @testset "Constructor" begin
@@ -38,5 +39,30 @@ using ProjectiveVectors
         z = embed([2, 3, 4, 5, 6, 7], (2, 3, 1))
         @test sprint(show, z) == "PVector{Int64, 3}:\n [2, 3, 1] × [4, 5, 6, 1] × [7, 1]"
         @test sprint(show, z, context=:compact => true) == "[2, 3, 1] × [4, 5, 6, 1] × [7, 1]"
+    end
+
+    @testset "Equality" begin
+        # all same data layout but should be considered different
+        z₁ = PVector([2, 3, 4, 5, 6, 7])
+        z₂ = PVector([2, 3, 4, 5, 6, 7], (2, 2))
+        z₃ = PVector([2, 3, 4, 5, 6, 7], (3, 1))
+
+        @test z₁ ≠ z₂
+        @test z₁ ≠ z₃
+        @test z₂ ≠ z₃
+        @test z₂ == z₂
+
+        z₂_2 = PVector([2, 3, 4, 5.0, 6.0, 7.0], (2, 2))
+        @test z₂ == z₂_2
+    end
+
+    @testset "Linear Algebra" begin
+        z = embed([2.0, 3, 4, 5, 6, 7], (2, 3, 1))
+        @test norm(z) == (3.7416573867739413, 8.831760866327848, 7.0710678118654755)
+        @test (norm(normalize!(z)) .≈ (1.0, 1.0, 1.0)) == (true, true, true)
+
+        z = embed([2.0, 3, 4, 5, 6, 7])
+        @test norm(z) == (11.832159566199232,)
+        @test norm(normalize!(z))[1] ≈ 1.0
     end
 end

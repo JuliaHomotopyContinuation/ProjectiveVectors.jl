@@ -1,8 +1,9 @@
 module ProjectiveVectors
 
-import LinearAlgebra
+using LinearAlgebra
+import Base: ==
 
-export PVector, data, dims, embed
+export PVector, data, dims, embed, dimension_indices
 
 
 """
@@ -27,6 +28,8 @@ struct PVector{T, N} <: AbstractProjectiveVector{T, N}
         @assert length(data) == sum(dims) + N
         new(data, dims)
     end
+
+    Base.copy(v::PVector{T, N}) where {T, N} = new{T, N}(copy(v.data), v.dims)
 end
 
 PVector(z::Vector{T}, dims::NTuple{N, Int}) where {T, N} = PVector{T, N}(z, dims)
@@ -63,6 +66,35 @@ Dimensions of the projective spaces in which `z` lives.
 """
 dims(z::PVector) = z.dims
 
+
+"""
+    dimension_indices(z::PVector{T, N})
+    dimension_indices(dims::NTuple{N, Int})
+
+Return a tuple of `N` `UnitRanges` indexing the underlying data.
+
+## Example
+```julia-repl
+julia> v = PVector([4, 5, 6], [2, 3], [1, 2])
+PVector{Int64, 3}:
+ [4, 5, 6] × [2, 3] × [1, 2]
+
+julia> dimension_indices(v)
+(1:3, 4:5, 6:7)
+```
+"""
+dimension_indices(z::PVector) = dimension_indices(dims(z))
+dimension_indices(dims::NTuple{1, Int}) = (1:(dims[1] + 1),)
+function dimension_indices(dims::NTuple{N, Int}) where {N}
+    k = Ref(1)
+    @inbounds map(dims) do dᵢ
+        curr_k = k[]
+        r = (curr_k:(curr_k + dᵢ))
+        k[] += dᵢ + 1
+        r
+    end
+end
+
 ##################
 # Base overloads
 #################
@@ -70,7 +102,7 @@ dims(z::PVector) = z.dims
 # AbstractArray interface
 
 Base.@propagate_inbounds Base.getindex(z::PVector, k) = getindex(z.data, k)
-Base.@propagate_inbounds Base.setindex!(z::PVector, zᵢ) = setindex!(z.data, zᵢ)
+Base.@propagate_inbounds Base.setindex!(z::PVector, v, i) = setindex!(z.data, v, i)
 Base.firstindex(z::PVector) = 1
 Base.lastindex(z::PVector) = length(z)
 
@@ -103,6 +135,12 @@ function Base.convert(::Type{PVector{T, N}}, z::PVector{T1, N}) where {T, N, T1}
     PVector(convert(Vector{T}, z.data), z.dims)
 end
 
+# equality
+(==)(v::PVector, w::PVector) = dims(v) == dims(w) && v.data == w.data
+
+
+# show
+
 Base.show(io::IO, ::MIME"text/plain", z::PVector) = show(io, z)
 function Base.show(io::IO, z::PVector{T, N}) where {T, N}
     if !(get(io, :compact, false))
@@ -127,6 +165,7 @@ Base.show(io::IO, ::MIME"application/juno+inline", z::PVector) = show(io, z)
 
 
 """
+    embed(xs::Vector...)
     embed(x::AbstractVector{T}, dims::NTuple{N, Int})::PVector{T, N}
 
 Embed an affine vector `x` in a product of affine spaces by the map πᵢ: xᵢ -> [xᵢ; 1]
@@ -134,7 +173,17 @@ for each subset `xᵢ` of `x` according to `dims`.
 
 ## Examples
 ```julia-repl
+julia> p = embed([2, 3])
+PVector{Int64, 1}:
+ [2, 3, 1]
 
+julia> z = embed([2, 3], [4, 5, 6])
+PVector{Int64, 2}:
+ [2, 3, 1] × [4, 5, 6, 1]
+
+julia> z = embed([2, 3, 4, 5, 6, 7], (2, 3, 1))
+PVector{Int64, 3}:
+ [2, 3, 1] × [4, 5, 6, 1] × [7, 1]
 ```
 """
 function embed(z::AbstractVector{T}, dims::NTuple{N, Int}) where {T, N}
@@ -164,4 +213,41 @@ function embed(vectors::NTuple{N, Vector{T}}) where {T, N}
 end
 embed(vectors::Vector...) = embed(promote(vectors...))
 
+
+LinearAlgebra.norm(z::PVector{T, 1}) where {T} = (LinearAlgebra.norm(z.data),)
+@generated function LinearAlgebra.norm(z::PVector{T, N}) where {T, N}
+    quote
+        r = dimension_indices(z)
+        @inbounds $(Expr(:tuple, (:(_norm_range(z, r[$i])) for i=1:N)...))
+    end
+end
+@inline function _norm_range(z::PVector{T}, rᵢ) where {T}
+    normᵢ = zero(T)
+    @inbounds for k in rᵢ
+        normᵢ += abs2(z[k])
+    end
+    sqrt(normᵢ)
+end
+
+
+function LinearAlgebra.rmul!(z::PVector{T, 1}, λ::Number) where {T}
+    rmul!(z.data, λ)
+    z
+end
+function LinearAlgebra.rmul!(z::PVector{T, N}, λ::NTuple{N, <:Number}) where {T, N}
+    r = dimension_indices(z)
+    @inbounds for i = 1:N
+        rᵢ, λᵢ = r[i], λ[i]
+        for k in rᵢ
+            z[k] *= λᵢ
+        end
+    end
+    z
+end
+
+function LinearAlgebra.normalize!(z::PVector{T, 1}) where {T}
+    normalize!(z.data)
+    z
+end
+LinearAlgebra.normalize!(z::PVector) = rmul!(z, inv.(LinearAlgebra.norm(z)))
 end
