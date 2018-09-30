@@ -1,6 +1,5 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-ProjectiveVectors = "8eaee0e8-c3dc-11e8-06b2-373297c8561d"
 
 [compat]
 Documenter = "^0.19.6"
