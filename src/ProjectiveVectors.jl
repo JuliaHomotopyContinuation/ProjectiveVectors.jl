@@ -259,7 +259,7 @@ end
         end
     elseif p == Inf
         @inbounds for k in rᵢ
-            normᵢ = max(normᵢ, abs2(z[k]))
+            normᵢ = @fastmath max(normᵢ, abs2(z[k])) # We do not care about NAN propagation
         end
     else
         error("p=$p not supported.")
@@ -276,7 +276,7 @@ end
         normᵢ = sqrt(normᵢ)
     elseif p == Inf
         @inbounds for k in rᵢ
-            normᵢ = max(normᵢ, abs(z[k]))
+            normᵢ = @fastmath max(normᵢ, abs(z[k]))
         end
     else
         error("p=$p not supported.")
