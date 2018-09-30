@@ -79,17 +79,17 @@ end
 
     @testset "affine_chart" begin
         w = [2.0, 3, 4, 5, 6, 7]
-        z = embed([2.0, 3, 4, 5, 6, 7], (2, 3, 1), normalize=true)
-        @test affine_chart(z) ≈ [2.0, 3, 4, 5, 6, 7]
-        @test affine_chart!(zeros(6), z) ≈ [2.0, 3, 4, 5, 6, 7]
+        z = embed(w, (2, 3, 1), normalize=true)
+        @test affine_chart(z) ≈ w
+        @test affine_chart!(zeros(6), z) ≈ w
 
-        z = normalize(embed([2.0, 3, 4, 5, 6, 7]))
-        @test affine_chart(z) ≈ [2.0, 3, 4, 5, 6, 7]
-        @test affine_chart!(zeros(6), z) ≈ [2.0, 3, 4, 5, 6, 7]
+        z = normalize(embed(w))
+        @test affine_chart(z) ≈ w
+        @test affine_chart!(zeros(6), z) ≈ w
 
-        z = embed([2.0, 3, 4, 5, 6, 7], normalize=true)
-        @test affine_chart(z) ≈ [2.0, 3, 4, 5, 6, 7]
-        @test affine_chart!(zeros(6), z) ≈ [2.0, 3, 4, 5, 6, 7]
+        z = embed(w, normalize=true)
+        @test affine_chart(z) ≈ w
+        @test affine_chart!(zeros(6), z) ≈ w
 
         for T = [Float64, ComplexF64]
             w = rand(ComplexF64, 6)
