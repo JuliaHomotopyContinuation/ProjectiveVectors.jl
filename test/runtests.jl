@@ -2,6 +2,10 @@ using Test
 using ProjectiveVectors
 using LinearAlgebra
 
+function Base.isapprox(x::NTuple{N, <:Number}, y::NTuple{N, <:Number}; kwargs...) where {N}
+    isapprox(collect(x), collect(y); kwargs...)
+end
+
 @testset "ProjectiveVectors" begin
     @testset "Constructor" begin
         x = PVector([1, 2, 3])
@@ -58,18 +62,29 @@ using LinearAlgebra
 
     @testset "Linear Algebra" begin
         z = embed([2.0, 3, 4, 5, 6, 7], (2, 3, 1))
-        @test norm(z) == (3.7416573867739413, 8.831760866327848, 7.0710678118654755)
-        @test (norm(normalize!(z)) .≈ (1.0, 1.0, 1.0)) == (true, true, true)
+        @test norm(z) ≈ (3.7416573867739413, 8.831760866327848, 7.0710678118654755)
+        @test norm(normalize(z)) ≈ (1.0, 1.0, 1.0)
+        @test norm(normalize(z, 2), 2) ≈ (1.0, 1.0, 1.0)
+        @test norm(normalize(z, Inf), Inf) ≈ (1.0, 1.0, 1.0)
 
         z = embed([2.0, 3, 4, 5, 6, 7])
-        @test norm(z) == (11.832159566199232,)
-        @test norm(normalize!(z))[1] ≈ 1.0
+        @test norm(z) ≈ (11.832159566199232,)
+        @test norm(normalize(z)) ≈ (1.0,)
+
+        z = embed(rand(ComplexF64, 6), (2, 3, 1))
+        @test norm(normalize(z)) ≈ (1.0, 1.0, 1.0)
+        @test norm(normalize(z, 2), 2) ≈ (1.0, 1.0, 1.0)
+        @test norm(normalize(z, Inf), Inf) ≈ (1.0, 1.0, 1.0)
     end
 
     @testset "affine_chart" begin
         z = normalize(embed([2.0, 3, 4, 5, 6, 7], (2, 3, 1)))
-        @test affine_chart(z) == [2.0, 3, 4, 5, 6, 7]
-        @test affine_chart!(zeros(6), z) == [2.0, 3, 4, 5, 6, 7]
+        @test affine_chart(z) ≈ [2.0, 3, 4, 5, 6, 7]
+        @test affine_chart!(zeros(6), z) ≈ [2.0, 3, 4, 5, 6, 7]
+
+        z = normalize(embed([2.0, 3, 4, 5, 6, 7]))
+        @test affine_chart(z) ≈ [2.0, 3, 4, 5, 6, 7]
+        @test affine_chart!(zeros(6), z) ≈ [2.0, 3, 4, 5, 6, 7]
 
         z = normalize(embed([2.0, 3, 4, 5, 6, 7]))
         @test affine_chart(z) ≈ [2.0, 3, 4, 5, 6, 7]

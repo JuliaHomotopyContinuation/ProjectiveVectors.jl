@@ -3,7 +3,8 @@ module ProjectiveVectors
 using LinearAlgebra
 import Base: ==
 
-export PVector, data, dims, embed, dimension_indices, affine_chart, affine_chart!
+export PVector, data, dims, embed, dimension_indices, hom_dimension_indices,
+    affine_chart, affine_chart!
 
 
 """
@@ -71,7 +72,7 @@ dims(z::PVector) = z.dims
     dimension_indices(z::PVector{T, N})
     dimension_indices(dims::NTuple{N, Int})
 
-Return a tuple of `N` `UnitRanges` indexing the underlying data.
+Return a tuple of `N` `UnitRange`s indexing the underlying data.
 
 ## Example
 ```julia-repl
@@ -92,6 +93,36 @@ function dimension_indices(dims::NTuple{N, Int}) where {N}
         r = (curr_k:(curr_k + dᵢ))
         k[] += dᵢ + 1
         r
+    end
+end
+
+"""
+    hom_dimension_indices(z::PVector{T, N})
+    hom_dimension_indices(dims::NTuple{N, Int})
+
+Return a tuple of `N` `(UnitRange, Int)` tuples indexing the underlying data per vector
+where the last coordinate in each vector is treated separetely.
+
+## Example
+```julia-repl
+julia> v = PVector([4, 5, 6], [2, 3], [1, 2])
+PVector{Int64, 3}:
+ [4, 5, 6] × [2, 3] × [1, 2]
+
+ julia> hom_dimension_indices(v)
+ ((1:2, 3), (4:4, 5), (6:6, 7))
+```
+"""
+hom_dimension_indices(z::PVector) = hom_dimension_indices(dims(z))
+hom_dimension_indices(dims::NTuple{1, Int}) = (1:(dims[1] + 1),)
+function hom_dimension_indices(dims::NTuple{N, Int}) where {N}
+    k = Ref(1) # we need the ref here to make the compiler happy
+    @inbounds map(dims) do dᵢ
+        curr_k = k[]
+        upper = curr_k + dᵢ
+        r = (curr_k:(upper - 1))
+        k[] += dᵢ + 1
+        (r, upper)
     end
 end
 
@@ -213,21 +244,45 @@ end
 embed(vectors::Vector...) = embed(promote(vectors...))
 
 
-LinearAlgebra.norm(z::PVector{T, 1}) where {T} = (LinearAlgebra.norm(z.data),)
-@generated function LinearAlgebra.norm(z::PVector{T, N}) where {T, N}
+LinearAlgebra.norm(z::PVector{T, 1}, p::Real=2) where {T} = (LinearAlgebra.norm(z.data, p),)
+@generated function LinearAlgebra.norm(z::PVector{T, N}, p::Real=2) where {T, N}
     quote
         r = dimension_indices(z)
-        @inbounds $(Expr(:tuple, (:(_norm_range(z, r[$i])) for i=1:N)...))
+        @inbounds $(Expr(:tuple, (:(_norm_range(z, r[$i], p)) for i=1:N)...))
     end
 end
-@inline function _norm_range(z::PVector{T}, rᵢ) where {T}
-    normᵢ = zero(T)
-    @inbounds for k in rᵢ
-        normᵢ += abs2(z[k])
+@inline function _norm_range(z::PVector{T}, rᵢ, p) where {T<:Complex}
+    normᵢ = zero(real(T))
+    if p == 2
+        @inbounds for k in rᵢ
+            normᵢ += abs2(z[k])
+        end
+    elseif p == Inf
+        @inbounds for k in rᵢ
+            normᵢ = max(normᵢ, abs2(z[k]))
+        end
+    else
+        error("p=$p not supported.")
     end
     sqrt(normᵢ)
 end
 
+@inline function _norm_range(z::PVector{T}, rᵢ, p) where {T}
+    normᵢ = zero(T)
+    if p == 2
+        @inbounds for k in rᵢ
+            normᵢ += abs2(z[k])
+        end
+        normᵢ = sqrt(normᵢ)
+    elseif p == Inf
+        @inbounds for k in rᵢ
+            normᵢ = max(normᵢ, abs(z[k]))
+        end
+    else
+        error("p=$p not supported.")
+    end
+    normᵢ
+end
 
 function LinearAlgebra.rmul!(z::PVector{T, 1}, λ::Number) where {T}
     rmul!(z.data, λ)
@@ -244,12 +299,12 @@ function LinearAlgebra.rmul!(z::PVector{T, N}, λ::NTuple{N, <:Number}) where {T
     z
 end
 
-function LinearAlgebra.normalize!(z::PVector{T, 1}) where {T}
-    normalize!(z.data)
+function LinearAlgebra.normalize!(z::PVector{T, 1}, p::Real=2) where {T}
+    normalize!(z.data, p)
     z
 end
-LinearAlgebra.normalize!(z::PVector) = rmul!(z, inv.(LinearAlgebra.norm(z)))
-
+LinearAlgebra.normalize!(z::PVector, p::Real=2) = rmul!(z, inv.(LinearAlgebra.norm(z, p)))
+LinearAlgebra.normalize(z::PVector, p::Real=2) = normalize!(copy(z), p)
 
 """
     affine_chart(z::PVector)
@@ -285,18 +340,16 @@ Inplace variant of [`affine_chart`](@ref)
 """
 Base.@propagate_inbounds function affine_chart!(x, z::PVector)
     k = 1
-    j = 1
-    for dᵢ in dims(z)
-        @inbounds normalizer = inv(z[j + dᵢ])
-        for _ = 1:dᵢ
-            x[k] = z[j] * normalizer
+    for (rᵢ, hᵢ) in hom_dimension_indices(z)
+        @inbounds normalizer = inv(z[hᵢ])
+        for i in rᵢ
+            x[k] = z[i] * normalizer
             k += 1
-            j += 1
         end
-        j += 1
     end
     x
 end
+
 Base.@propagate_inbounds function affine_chart!(x, z::PVector{T, 1}) where {T}
     n = length(z)
     v = inv(z[n])
