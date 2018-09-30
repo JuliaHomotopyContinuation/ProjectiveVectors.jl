@@ -474,7 +474,7 @@ Compute the dot product of v and w for the indices in rᵢ.
 """
 @inline function _dot_range(v::PVector{T1, N}, w::PVector{T2, N}, rᵢ) where {T1, T2, N}
     dotᵢ = zero(promote_type(T1, T2))
-    @inbounds @simd for k in rᵢ
+    @inbounds for k in rᵢ
         dotᵢ += conj(v[k]) * w[k]
     end
     dotᵢ
