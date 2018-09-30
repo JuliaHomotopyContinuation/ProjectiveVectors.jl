@@ -5,7 +5,7 @@ makedocs(
     format = :html,
     sitename = "ProjectiveVectors",
     pages = [
-        "Index" => "index.html"
+        "Index" => "index.md"
         ],
     doctest=false,
     modules=[ProjectiveVectors],
