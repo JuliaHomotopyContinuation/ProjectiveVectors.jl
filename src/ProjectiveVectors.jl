@@ -463,7 +463,7 @@ end
     true
 end
 
-function LinearAlgebra.dot(v::PVector{<:Number, N}, w::PVector{<:Number, N}) where N
+function LinearAlgebra.dot(v::PVector{<:Number, 1}, w::PVector{<:Number, 1})
     (dot(v.data, w.data),)
 end
 
