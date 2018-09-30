@@ -98,4 +98,12 @@ end
             @test norm_affine_chart(z, Inf) ≈ norm(w, Inf)
         end
     end
+
+    @testset "Dot, Fubini-Study" begin
+        z = embed(rand(ComplexF64, 6), normalize=true)
+        @test abs.(dot(z, z)) ≈ (1.0,)
+        z = embed(rand(ComplexF64, 6), (2, 4), normalize=true)
+        @test abs.(dot(z, z)) ≈ (1.0, 1.0)
+        @test fubini_study(z, z) == (0.0, 0.0)
+    end
 end

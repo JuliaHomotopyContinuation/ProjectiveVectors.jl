@@ -455,6 +455,10 @@ end
     true
 end
 
+function LinearAlgebra.dot(v::PVector{<:Number, N}, w::PVector{<:Number, N}) where N
+    (dot(v.data, w.data),)
+end
+
 """
     _dot_range(v::PVector{T1, N}, w::PVector{T2, N}, rᵢ::UnitRange)
 
