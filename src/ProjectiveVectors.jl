@@ -492,7 +492,7 @@ This is defined as ``\\arccos|⟨vᵢ,wᵢ⟩|``.
         r = dimension_indices(v)
         $(Expr(:tuple, (quote
             @inbounds rᵢ = r[$i]
-            acos(sqrt(abs2(_dot_range(v, w, rᵢ)) / (_norm_range2(v, rᵢ, 2) * _norm_range(w, rᵢ, 2))))
+            acos(abs2(_dot_range(v, w, rᵢ)) / (_norm_range2(v, rᵢ, 2) * _norm_range2(w, rᵢ, 2)))
         end for i=1:N)...))
     end
 end
