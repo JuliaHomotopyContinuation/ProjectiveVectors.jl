@@ -7,7 +7,7 @@
 Data structure for elements in products of projective spaces. This package defines as type `PVector{T,N}` where `T` is the
 element type and `N` is the number of projective spaces in which the vector lives.
 
-```julia-repl
+```julia
 julia> using ProjectiveVectors, LinearAlgebra
 
 # We want to consider the vector [1, 2, 3, 4, 5, 6] as a vector [1:2:3]×[4:5:6] in P²×P²
