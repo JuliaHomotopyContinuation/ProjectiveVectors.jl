@@ -259,11 +259,13 @@ embed(vectors::Vector...; kwargs...) = embed(promote(vectors...); kwargs...)
 Compute the `p`-norm of `z` per vector space. This always returns a `Tuple`.
 
 ## Example
+```julia-repl
 julia> norm(embed([1, 2, 3, 4, 5], (2, 3)))
 (2.449489742783178, 7.14142842854285)
 
 julia> norm(embed([1, 2, 3, 4, 5]))
 (7.483314773547883,)
+```
 """
 LinearAlgebra.norm(z::PVector{T, 1}, p::Real=2) where {T} = (LinearAlgebra.norm(z.data, p),)
 @generated function LinearAlgebra.norm(z::PVector{T, N}, p::Real=2) where {T, N}
@@ -295,7 +297,7 @@ Compute the `p`-norm of `z` for the indices in `rᵢ`.
     end
     normᵢ
 end
-@inline function _norm_range(z::PVector{T}, rᵢ::UnitRange{Int}, p::Real) where {T}
+@inline function _norm_range(z::PVector{<:Complex}, rᵢ::UnitRange{Int}, p::Real) where {T}
     sqrt(_norm_range2(z, rᵢ, p))
 end
 @inline function _norm_range2(z::PVector{T}, rᵢ::UnitRange{Int}, p::Real) where T
@@ -346,6 +348,12 @@ function LinearAlgebra.normalize!(z::PVector{T, 1}, p::Real=2) where {T}
     z
 end
 LinearAlgebra.normalize!(z::PVector, p::Real=2) = rmul!(z, inv.(LinearAlgebra.norm(z, p)))
+
+"""
+    LinearAlgebra.normalize(z::PVector{T, N}, p::Real=2)::PVector{T,N}
+
+Normalize each component of `z` separetly.
+"""
 LinearAlgebra.normalize(z::PVector, p::Real=2) = normalize!(copy(z), p)
 
 """
