@@ -4,7 +4,7 @@ using LinearAlgebra
 import Base: ==
 
 export PVector, data, dims, embed, dimension_indices, hom_dimension_indices,
-    affine_chart, affine_chart!
+    affine_chart, affine_chart!, norm_affine_chart
 
 
 """
@@ -195,28 +195,33 @@ Base.show(io::IO, ::MIME"application/juno+inline", z::PVector) = show(io, z)
 
 
 """
-    embed(xs::Vector...)
-    embed(x::AbstractVector{T}, dims::NTuple{N, Int})::PVector{T, N}
+    embed(xs::Vector...; normalize=false)
+    embed(x::AbstractVector{T}, dims::NTuple{N, Int}; normalize=false)::PVector{T, N}
 
 Embed an affine vector `x` in a product of affine spaces by the map πᵢ: xᵢ -> [xᵢ; 1]
-for each subset `xᵢ` of `x` according to `dims`.
+for each subset `xᵢ` of `x` according to `dims`. If `normalize` is true the vector is
+normalized.
 
 ## Examples
 ```julia-repl
-julia> p = embed([2, 3])
+julia> embed([2, 3])
 PVector{Int64, 1}:
  [2, 3, 1]
 
-julia> z = embed([2, 3], [4, 5, 6])
+julia> embed([2, 3], [4, 5, 6])
 PVector{Int64, 2}:
  [2, 3, 1] × [4, 5, 6, 1]
 
-julia> z = embed([2, 3, 4, 5, 6, 7], (2, 3, 1))
-PVector{Int64, 3}:
- [2, 3, 1] × [4, 5, 6, 1] × [7, 1]
+julia> embed([2.0, 3, 4, 5, 6, 7], (2, 3, 1))
+PVector{Float64, 3}:
+ [2.0, 3.0, 1.0] × [4.0, 5.0, 6.0, 1.0] × [7.0, 1.0]
+
+ julia> embed([2.0, 3, 4, 5, 6, 7], (2, 3, 1), normalize=true)
+ PVector{Float64, 3}:
+  [0.5345224838248488, 0.8017837257372732, 0.2672612419124244] × [0.45291081365783825, 0.5661385170722978, 0.6793662204867574, 0.11322770341445956] × [0.9899494936611666, 0.1414213562373095]
 ```
 """
-function embed(z::AbstractVector{T}, dims::NTuple{N, Int}) where {T, N}
+function embed(z::AbstractVector{T}, dims::NTuple{N, Int}; normalize=false) where {T, N}
     n = sum(dims)
     if length(z) ≠ n
         error("Cannot embed `x` since passed dimensions `dims` are invalid for the given vector `x`.")
@@ -234,14 +239,18 @@ function embed(z::AbstractVector{T}, dims::NTuple{N, Int}) where {T, N}
         k += 1
     end
 
-    PVector(data, dims)
+    v = PVector(data, dims)
+    if normalize == true
+        normalize!(v)
+    end
+    v
 end
-function embed(vectors::NTuple{N, Vector{T}}) where {T, N}
+function embed(vectors::NTuple{N, Vector{T}}; kwargs...) where {T, N}
     data = reduce(vcat, vectors)
     dims = length.(vectors)
-    embed(data, dims)
+    embed(data, dims; kwargs...)
 end
-embed(vectors::Vector...) = embed(promote(vectors...))
+embed(vectors::Vector...; kwargs...) = embed(promote(vectors...); kwargs...)
 
 
 LinearAlgebra.norm(z::PVector{T, 1}, p::Real=2) where {T} = (LinearAlgebra.norm(z.data, p),)
@@ -251,23 +260,9 @@ LinearAlgebra.norm(z::PVector{T, 1}, p::Real=2) where {T} = (LinearAlgebra.norm(
         @inbounds $(Expr(:tuple, (:(_norm_range(z, r[$i], p)) for i=1:N)...))
     end
 end
-@inline function _norm_range(z::PVector{T}, rᵢ, p) where {T<:Complex}
-    normᵢ = zero(real(T))
-    if p == 2
-        @inbounds for k in rᵢ
-            normᵢ += abs2(z[k])
-        end
-    elseif p == Inf
-        @inbounds for k in rᵢ
-            normᵢ = @fastmath max(normᵢ, abs2(z[k])) # We do not care about NAN propagation
-        end
-    else
-        error("p=$p not supported.")
-    end
-    sqrt(normᵢ)
-end
 
-@inline function _norm_range(z::PVector{T}, rᵢ, p) where {T}
+
+@inline function _norm_range(z::PVector{T}, rᵢ::UnitRange{Int}, p::Real) where {T}
     normᵢ = zero(T)
     if p == 2
         @inbounds for k in rᵢ
@@ -283,6 +278,25 @@ end
     end
     normᵢ
 end
+@inline function _norm_range(z::PVector{T}, rᵢ::UnitRange{Int}, p::Real) where {T}
+    sqrt(_norm_range2(z, rᵢ, p))
+end
+@inline function _norm_range2(z::PVector{T}, rᵢ::UnitRange{Int}, p::Real) where T
+    normᵢ = zero(real(T))
+    if p == 2
+        @inbounds for k in rᵢ
+            normᵢ += abs2(z[k])
+        end
+    elseif p == Inf
+        @inbounds for k in rᵢ
+            normᵢ = @fastmath max(normᵢ, abs2(z[k])) # We do not care about NAN propagation
+        end
+    else
+        error("p=$p not supported.")
+    end
+    normᵢ
+end
+
 
 function LinearAlgebra.rmul!(z::PVector{T, 1}, λ::Number) where {T}
     rmul!(z.data, λ)
@@ -336,7 +350,7 @@ end
 """
     affine_chart!(x, z::PVector)
 
-Inplace variant of [`affine_chart`](@ref)
+Inplace variant of [`affine_chart`](@ref).
 """
 Base.@propagate_inbounds function affine_chart!(x, z::PVector)
     k = 1
@@ -349,7 +363,6 @@ Base.@propagate_inbounds function affine_chart!(x, z::PVector)
     end
     x
 end
-
 Base.@propagate_inbounds function affine_chart!(x, z::PVector{T, 1}) where {T}
     n = length(z)
     v = inv(z[n])
@@ -360,6 +373,38 @@ Base.@propagate_inbounds function affine_chart!(x, z::PVector{T, 1}) where {T}
 end
 
 
+"""
+     norm_affine_chart(z::PVector, p::Real=2) where {T, N}
+
+Compute the `p`-norm of `z` on it's affine_chart.
+"""
+function norm_affine_chart(z::PVector{T, N}, p::Real=2) where {T, N}
+    # We need to compute for each subrange
+    #     ||z[hᵢ]⁻¹z[rᵢ]|| = |z[hᵢ]⁻¹|||z[rᵢ]|| = |z[hᵢ]|⁻¹||z[rᵢ]||
+    r = hom_dimension_indices(z)
+    norm = zero(real(T))
+    if p == 2
+        for (rᵢ, hᵢ) in r
+            norm += _norm_range2(z, rᵢ, p) / abs2(z[hᵢ])
+        end
+        return sqrt(norm)
+    elseif p == Inf
+        if T <: Complex
+            for (rᵢ, hᵢ) in r
+                norm = @fastmath max(norm, _norm_range2(z, rᵢ, p) / abs2(z[hᵢ]))
+            end
+            return sqrt(norm)
+        else
+            for (rᵢ, hᵢ) in r
+                norm = @fastmath max(norm, _norm_range(z, rᵢ, p) / abs(z[hᵢ]))
+            end
+            return norm
+        end
+    else
+        error("$p-norm not supported")
+    end
+    norm
+end
 
 
 #
