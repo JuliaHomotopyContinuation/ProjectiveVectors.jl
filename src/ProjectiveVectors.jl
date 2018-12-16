@@ -1,6 +1,7 @@
 module ProjectiveVectors
 
 using LinearAlgebra
+using StaticArrays
 import Base: ==
 
 export PVector, data, dims, embed, dimension_indices, dimension_indices_homvars,
@@ -33,15 +34,14 @@ struct PVector{T, N} <: AbstractProjectiveVector{T, N}
     Base.copy(v::PVector{T, N}) where {T, N} = new{T, N}(copy(v.data), v.dims)
 end
 
-PVector(z::Vector{T}, dims::NTuple{N, Int}) where {T, N} = PVector{T, N}(z, dims)
-
-PVector(vectors::Vector...) = PVector(promote(vectors...))
-function PVector(vectors::NTuple{N, Vector{T}}) where {T, N}
+PVector(z::AbstractVector{T}, dims::NTuple{N, Int}) where {T, N} = PVector{T, N}(z, dims)
+PVector(vectors::AbstractVector...) = PVector(promote(vectors...))
+function PVector(vectors::NTuple{N, <:AbstractVector{T}}) where {T, N}
     data = reduce(vcat, vectors)
     dims = _dim.(vectors)
     PVector(data, dims)
 end
-_dim(x::Vector) = length(x) - 1
+_dim(x::AbstractVector) = length(x) - 1
 
 
 
@@ -113,7 +113,6 @@ PVector{Int64, 3}:
 ```
 """
 dimension_indices_homvars(z::PVector) = dimension_indices_homvars(dims(z))
-dimension_indices_homvars(dims::NTuple{1, Int}) = (1:(dims[1] + 1),)
 function dimension_indices_homvars(dims::NTuple{N, Int}) where {N}
     k = Ref(1) # we need the ref here to make the compiler happy
     @inbounds map(dims) do dᵢ
@@ -218,7 +217,7 @@ Base.show(io::IO, ::MIME"application/juno+inline", z::PVector) = show(io, z)
 
 
 """
-    embed(xs::Vector...; normalize=false)
+    embed(xs::AbstractVector...; normalize=false)
     embed(x::AbstractVector{T}, dims::NTuple{N, Int}; normalize=false)::PVector{T, N}
 
 Embed an affine vector `x` in a product of affine spaces by the map πᵢ: xᵢ -> [xᵢ; 1]
@@ -250,7 +249,7 @@ function embed(z::AbstractVector{T}, dims::NTuple{N, Int}; normalize=false) wher
     v = PVector(data, dims)
     embed!(v, z; normalize=normalize)
 end
-function embed!(v::PVector, z::Vector; normalize=false)
+function embed!(v::PVector, z::AbstractVector; normalize=false)
     dims = v.dims
     n = sum(dims)
     if length(z) == n + length(dims) # assume z has the same layout as v
@@ -285,12 +284,12 @@ function embed!(v::PVector, z::PVector)
     v
 end
 
-function embed(vectors::NTuple{N, Vector{T}}; kwargs...) where {T, N}
+function embed(vectors::NTuple{N, <:AbstractVector{T}}; kwargs...) where {T, N}
     data = reduce(vcat, vectors)
     dims = length.(vectors)
     embed(data, dims; kwargs...)
 end
-embed(vectors::Vector...; kwargs...) = embed(promote(vectors...); kwargs...)
+embed(vectors::AbstractVector...; kwargs...) = embed(promote(vectors...); kwargs...)
 
 
 """
@@ -428,7 +427,29 @@ end
 
 Inplace variant of [`affine_chart`](@ref).
 """
-function affine_chart!(x, z::PVector)
+function affine_chart!(x::AbstractVector, z::PVector{T,N}) where {T,N}
+    if N == 1 # don't split into sepearat method to avoid method ambiguity with SVector below
+        @boundscheck length(x) >= length(z) - 1
+        n = length(z)
+        v = inv(z[n])
+        for i=1:n-1
+            x[i] = z[i] * v
+        end
+    else
+        k = 1
+        for (rᵢ, hᵢ) in dimension_indices_homvars(z)
+            @inbounds normalizer = inv(z[hᵢ])
+            for i in rᵢ
+                x[k] = z[i] * normalizer
+                k += 1
+            end
+        end
+    end
+    x
+end
+
+function affine_chart!(::SVector{M, S}, z::PVector{T, N}) where {M,S,T,N}
+    x = @MVector zeros(S, M)
     k = 1
     for (rᵢ, hᵢ) in dimension_indices_homvars(z)
         @inbounds normalizer = inv(z[hᵢ])
@@ -437,17 +458,9 @@ function affine_chart!(x, z::PVector)
             k += 1
         end
     end
-    x
+    SVector{M}(x)
 end
-function affine_chart!(x, z::PVector{T, 1}) where {T}
-    @boundscheck length(x) >= length(z) - 1
-    n = length(z)
-    v = inv(z[n])
-    for i=1:n-1
-        x[i] = z[i] * v
-    end
-    x
-end
+
 
 function affine_chart!(z::PVector{T}) where T
     k = 1
@@ -462,6 +475,9 @@ function affine_chart!(z::PVector{T}) where T
     end
     z
 end
+
+
+
 
 
 """
