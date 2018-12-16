@@ -6,7 +6,8 @@ data
 dims
 embed
 dimension_indices
-hom_dimension_indices
+dimension_indices_homvars
+homvars
 affine_chart
 affine_chart!
 norm_affine_chart
