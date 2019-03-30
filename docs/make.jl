@@ -2,7 +2,7 @@ using Documenter, ProjectiveVectors
 using LinearAlgebra
 
 makedocs(
-    format = :html,
+    format = Documenter.HTML(),
     sitename = "ProjectiveVectors",
     pages = [
         "Index" => "index.md"

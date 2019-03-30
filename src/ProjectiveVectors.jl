@@ -4,7 +4,7 @@ using LinearAlgebra
 using StaticArrays
 import Base: ==
 
-export PVector, data, dims, embed, dimension_indices, dimension_indices_homvars,
+export PVector, data, dims, embed, dimension_indices, dimension_indices_homvars, homvars,
     affine_chart, affine_chart!, norm_affine_chart, fubini_study
 
 
@@ -293,7 +293,7 @@ embed(vectors::AbstractVector...; kwargs...) = embed(promote(vectors...); kwargs
 
 
 """
-    LinearAlgebra.norm(z::PVector{T,N}, p::Real=2)::NTuple{N, real(T)}
+    norm(z::PVector{T,N}, p::Real=2)::NTuple{N, real(T)}
 
 Compute the `p`-norm of `z` per vector space. This always returns a `Tuple`.
 

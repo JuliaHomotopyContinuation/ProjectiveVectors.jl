@@ -1,20 +1,33 @@
-Data structure for elements in products of projective spaces.
+Data structure for elements projective space as well as in in products of projective spaces.
 
+## Type
 ```@docs
 PVector
-data
+```
+## Informations
+
+```@docs
 dims
-embed
+homvars
 dimension_indices
 dimension_indices_homvars
-homvars
+
+```
+## Conversion between affine and projective space
+```@docs
 affine_chart
 affine_chart!
+embed
+```
+
+## Other methods
+```@docs
+data
 norm_affine_chart
-norm
-normalize!
-normalize
-dot
-rmul!
+norm(z::PVector)
+normalize!(::PVector)
+normalize(::PVector)
+dot(v::PVector{T, N}, w::PVector{T2, N}) where {T, T2, N}
+rmul!(z::PVector{T, 1}, λ::Number) where {T}
 fubini_study
 ```
