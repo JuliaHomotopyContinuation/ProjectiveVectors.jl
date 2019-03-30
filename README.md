@@ -2,7 +2,7 @@
 | **Documentation** | **Build Status** |
 |:-----------------:|:----------------:|
 | [![][docs-stable-img]][docs-stable-url] | [![Build Status][build-img]][build-url] |
-| [![][docs-latest-img]][docs-latest-url] | [![Codecov branch][codecov-img]][codecov-url] |
+| [![][docs-dev-img]][docs-dev-url] | [![Codecov branch][codecov-img]][codecov-url] |
 
 Data structure for elements in products of projective spaces. This package defines as type `PVector{T,N}` where `T` is the
 element type and `N` is the number of projective spaces in which the vector lives.
@@ -33,10 +33,10 @@ julia> norm(w, Inf)
 (4.0,)
 ```
 
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
-[docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
 [docs-stable-url]: https://www.juliahomotopycontinuation.org/ProjectiveVectors.jl/stable
-[docs-latest-url]: https://www.juliahomotopycontinuation.org/ProjectiveVectors.jl/latest
+[docs-dev-url]: https://www.juliahomotopycontinuation.org/ProjectiveVectors.jl/dev
 
 [build-img]: https://travis-ci.org/JuliaHomotopyContinuation/ProjectiveVectors.jl.svg?branch=master
 [build-url]: https://travis-ci.org/JuliaHomotopyContinuation/ProjectiveVectors.jl
