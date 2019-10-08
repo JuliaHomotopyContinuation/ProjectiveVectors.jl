@@ -1,7 +1,7 @@
 name = "ProjectiveVectors"
 uuid = "01f381cc-face-5a0a-ade9-ef63dc65d628"
 authors = ["Sascha Timme <sascha.timme@gmail.com>"]
-version = "0.2.2"
+version = "1.0.0"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
