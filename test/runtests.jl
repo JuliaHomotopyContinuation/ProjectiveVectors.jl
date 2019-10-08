@@ -125,3 +125,8 @@ end
         @test (v × w × v)[3,:] == v
     end
 end
+
+
+a, b = rand(ComplexF64, 2);
+v = PVector(a .* [1,2,3]) × PVector(b .* [4, 5]);
+isreal(v, 1e-6)
