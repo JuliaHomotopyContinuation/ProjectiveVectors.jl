@@ -3,6 +3,7 @@ module ProjectiveVectors
 using LinearAlgebra
 using StaticArrays
 import Base: ==
+import LinearAlgebra: ×
 
 export PVector,
        data,
@@ -14,7 +15,11 @@ export PVector,
        affine_chart,
        affine_chart!,
        norm_affine_chart,
-       fubini_study
+       fubini_study,
+       ×,
+       component,
+       components,
+       combine
 
 
 """
@@ -30,6 +35,27 @@ abstract type AbstractProjectiveVector{T,N} <: AbstractVector{T} end
 
 A `PVector` represents a projective vector `z` which lives in a product of `N`
 projective spaces ``P(T)^{dᵢ}``. The underlying data structure is a `Vector{T}`.
+
+    PVector(v::AbstractVector, dims::NTuple{N,Int}) where N
+
+Create a projective vector `v` living in a product of projective spaces with (projective)
+dimensions `dims`.
+
+    PVector(v, w, ...)
+
+Create the product of projective vectors.
+
+## Example
+```julia
+julia> PVector([1,2,3], [4, 5])
+[1 : 2 : 3] × [4 : 5]
+
+julia> PVector([1, 2, 3, 4, 5], (2, 1))
+[1 : 2 : 3] × [4 : 5]
+
+julia> PVector([1,2,3], [4, 5], [6, 7, 8])
+[1 : 2 : 3] × [4 : 5] × [6 : 7 : 8]
+```
 """
 struct PVector{T,N} <: AbstractProjectiveVector{T,N}
     data::Vector{T}
@@ -52,8 +78,6 @@ function PVector(vectors::NTuple{N,<:AbstractVector{T}}) where {T,N}
 end
 _dim(x::AbstractVector) = length(x) - 1
 
-
-
 """
     data(z::AbstractProjectiveVector)
 
@@ -67,7 +91,6 @@ For general `AbstractVector`s this is just the identity.
 """
 data(z::PVector) = z.data
 data(z::AbstractVector) = z
-
 
 """
     dims(z::PVector)
@@ -180,7 +203,7 @@ Base.@propagate_inbounds function Base.getindex(z::PVector, i::Integer, j::Integ
     end
     z[k+j]
 end
-function Base.checkbounds(z::PVector{T,N}, i, j) where {T,N}
+function Base.checkbounds(z::PVector{T,N}, i::Integer, j::Integer) where {T,N}
     if i < 1 || i > N
         error("Attempt to access product of $N projective spaces at index $i")
     end
@@ -204,9 +227,9 @@ end
 # show
 Base.show(io::IO, ::MIME"text/plain", z::PVector) = show(io, z)
 function Base.show(io::IO, z::PVector{T,N}) where {T,N}
-    if !(get(io, :compact, false))
-        print(io, "PVector{$T, $N}:\n ")
-    end
+    # if !(get(io, :compact, false))
+    #     print(io, "PVector{$T, $N}: ")
+    # end
     for (i, dᵢ) in enumerate(dims(z))
         if i > 1
             print(io, " × ")
@@ -215,7 +238,7 @@ function Base.show(io::IO, z::PVector{T,N}) where {T,N}
         for j = 1:(dᵢ+1)
             print(io, z[i, j])
             if j ≤ dᵢ
-                print(io, ", ")
+                print(io, " : ")
             end
         end
         print(io, "]")
@@ -223,6 +246,83 @@ function Base.show(io::IO, z::PVector{T,N}) where {T,N}
 end
 Base.show(io::IO, ::MIME"application/juno+inline", z::PVector) = show(io, z)
 
+
+############################
+## Combine and components ##
+############################
+"""
+    combine(v::PVector, w::PVector...)
+
+Combine the projective vectors `v` and `wᵢ` to the flattened product.
+There is also an operator version, [`×`](@ref) (written `\times<tab>`).
+
+## Example
+
+julia> v = PVector([1, 2, 3]);
+julia> w = PVector([4, 5]);
+julia> combine(v, w)
+[1 : 2 : 3] × [4 : 5]
+"""
+combine(v::PVector, w::PVector) = PVector([data(v);data(w)], tuple(dims(v)..., dims(w)...))
+combine(v::PVector, w::PVector...) = combine(combine(v, first(w)), Base.tail(w)...)
+
+"""
+    ×(v::PVector, w::PVector...)
+
+Operator version of [`combine`](@ref).
+
+## Example
+
+```julia
+julia> v = PVector([1, 2, 3]);
+julia> w = PVector([4, 5]);
+julia> v × w
+[1 : 2 : 3] × [4 : 5]
+```
+"""
+×(v::PVector, w::PVector...) = combine(v, w...)
+
+
+"""
+    components(v::PVector{T,N})::NTuple{N, PVector{T, 1}}
+
+Decompose the element ``v ∈ P(ℂ^n₁) × ... × P(ℂ^nⱼ)``  into ``(v₁, …, vⱼ) = v``
+
+## Example
+
+```julia
+julia> v = PVector([1, 2, 3]);
+julia> w = PVector([4, 5]);
+julia> v × w
+[1 : 2 : 3] × [4 : 5]
+julia> components(v × w) == (v, w)
+true
+```
+"""
+components(v::PVector{<:Any,1}) = (v,)
+components(v::PVector) = PVector.(getindex.(Ref(v),dimension_indices(v)))
+
+"""
+    component(v::PVector{T,N}, i)::PVector{T,1}
+
+Obtain the `i`-th component of ``v ∈ P(ℂ^n₁) × ... × P(ℂ^nⱼ)``.
+
+## Example
+
+```julia
+julia> v = PVector([1, 2, 3]);
+julia> w = PVector([4, 5]);
+julia> v × w
+[1 : 2 : 3] × [4 : 5]
+julia> component(v × w, 1)
+[1 : 2 : 3]
+# alternative you can also indexing
+julia> (v × w)[1,:]
+[1 : 2 : 3]
+```
+"""
+component(v::PVector, i::Integer) = PVector(v[dimension_indices(v)[i]])
+Base.getindex(z::PVector, i::Integer, ::Colon) = component(z, i)
 
 
 """
