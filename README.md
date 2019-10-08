@@ -12,22 +12,19 @@ julia> using ProjectiveVectors, LinearAlgebra
 
 # We want to consider the vector [1, 2, 3, 4, 5, 6] as a vector [1:2:3]×[4:5:6] in P²×P²
 julia> PVector([1, 2, 3, 4, 5, 6], (2, 2))
-PVector{Int64, 2}:
- [1, 2, 3] × [4, 5, 6]
+[1 : 2 : 3] × [4 : 5 : 6]
 
 # We also can embed an affine vector into a projective space.
 # Here we embed [2, 3, 4, 5, 6, 7] into P²×P³×P¹
 julia> v = embed([2, 3, 4, 5, 6, 7], (2, 3, 1))
-PVector{Int64, 3}:
- [2, 3, 1] × [4, 5, 6, 1] × [7, 1]
+[2 : 3 : 1] × [4 : 5 : 6 : 1] × [7 : 1]
 
 # We support several linear algebra routines. These always return a tuple
 julia> norm(v)
 (3.7416573867739413, 8.831760866327848, 7.0710678118654755)
 
 julia> w = embed([2, 3, 4])
-PVector{Int64, 1}:
- [2, 3, 4, 1]
+[2 : 3 : 4 : 1]
 
 julia> norm(w, Inf)
 (4.0,)
