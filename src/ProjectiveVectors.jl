@@ -682,4 +682,44 @@ This is defined as ``\\arccos|⟨vᵢ,wᵢ⟩|``.
     end
 end
 
+"""
+    isreal(v::PVector{T}, tol::Real)
+
+Check whether there exists a fully real representative of `v`. For this `v` is first normalized,
+and then the largest entry in each component is made real. If ater this the imaginary part
+of every coordinate is less than `tol` the vector is considered real.
+
+## Example
+
+```julia
+julia> a, b = rand(ComplexF64, 2);
+julia> v = PVector(a .* [1,2,3]) × PVector(b .* [4, 5]);
+julia> isreal(v, 1e-6)
+true
+```
+"""
+function Base.isreal(v::PVector{T}, tol::Real) where T
+    w = normalize(v)
+    λ = map(dimension_indices(w)) do rᵢ
+        maxᵢ = zero(real(T))
+        max_ind = 0
+        for i in rᵢ
+            wᵢ = abs(w[i])
+            if wᵢ > maxᵢ
+                max_ind = i
+                maxᵢ = wᵢ
+            end
+        end
+        cis(-angle(w[max_ind]))
+    end
+    rmul!(w, λ)
+    max_norm = Inf
+    for wᵢ in w
+        if abs(imag(wᵢ)) > tol
+            return false
+        end
+    end
+    true
 end
+
+end # module
