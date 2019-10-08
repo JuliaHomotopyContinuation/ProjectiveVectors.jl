@@ -686,7 +686,7 @@ end
     isreal(v::PVector{T}, tol::Real)
 
 Check whether there exists a fully real representative of `v`. For this `v` is first normalized,
-and then the largest entry in each component is made real. If ater this the imaginary part
+and then the largest entry in each component is made real. If after this the imaginary part
 of every coordinate is less than `tol` the vector is considered real.
 
 ## Example

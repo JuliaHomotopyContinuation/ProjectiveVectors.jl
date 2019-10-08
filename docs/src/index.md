@@ -33,4 +33,5 @@ normalize(::PVector)
 dot(v::PVector{T, N}, w::PVector{T2, N}) where {T, T2, N}
 rmul!(z::PVector{T, 1}, λ::Number) where {T}
 fubini_study
+isreal(v::PVector, tol::Real)
 ```
