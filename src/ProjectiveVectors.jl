@@ -4,8 +4,17 @@ using LinearAlgebra
 using StaticArrays
 import Base: ==
 
-export PVector, data, dims, embed, dimension_indices, dimension_indices_homvars, homvars,
-    affine_chart, affine_chart!, norm_affine_chart, fubini_study
+export PVector,
+       data,
+       dims,
+       embed,
+       dimension_indices,
+       dimension_indices_homvars,
+       homvars,
+       affine_chart,
+       affine_chart!,
+       norm_affine_chart,
+       fubini_study
 
 
 """
@@ -13,7 +22,7 @@ export PVector, data, dims, embed, dimension_indices, dimension_indices_homvars,
 
 An abstract type representing a vector in a product of `N` projective spaces ``P(T^{dᵢ})``.
 """
-abstract type AbstractProjectiveVector{T, N} <: AbstractVector{T} end
+abstract type AbstractProjectiveVector{T,N} <: AbstractVector{T} end
 
 
 """
@@ -22,21 +31,21 @@ abstract type AbstractProjectiveVector{T, N} <: AbstractVector{T} end
 A `PVector` represents a projective vector `z` which lives in a product of `N`
 projective spaces ``P(T)^{dᵢ}``. The underlying data structure is a `Vector{T}`.
 """
-struct PVector{T, N} <: AbstractProjectiveVector{T, N}
+struct PVector{T,N} <: AbstractProjectiveVector{T,N}
     data::Vector{T}
-    dims::NTuple{N, Int} # Projective dimensions
+    dims::NTuple{N,Int} # Projective dimensions
 
-    function PVector{T, N}(data, dims) where {T, N}
+    function PVector{T,N}(data, dims) where {T,N}
         @assert length(data) == sum(dims) + N
         new(data, dims)
     end
 
-    Base.copy(v::PVector{T, N}) where {T, N} = new{T, N}(copy(v.data), v.dims)
+    Base.copy(v::PVector{T,N}) where {T,N} = new{T,N}(copy(v.data), v.dims)
 end
 
-PVector(z::AbstractVector{T}, dims::NTuple{N, Int}) where {T, N} = PVector{T, N}(z, dims)
+PVector(z::AbstractVector{T}, dims::NTuple{N,Int}) where {T,N} = PVector{T,N}(z, dims)
 PVector(vectors::AbstractVector...) = PVector(promote(vectors...))
-function PVector(vectors::NTuple{N, <:AbstractVector{T}}) where {T, N}
+function PVector(vectors::NTuple{N,<:AbstractVector{T}}) where {T,N}
     data = reduce(vcat, vectors)
     dims = _dim.(vectors)
     PVector(data, dims)
@@ -84,12 +93,12 @@ julia> dimension_indices(v)
 ```
 """
 dimension_indices(z::PVector) = dimension_indices(dims(z))
-dimension_indices(dims::NTuple{1, Int}) = (1:(dims[1] + 1),)
-function dimension_indices(dims::NTuple{N, Int}) where {N}
+dimension_indices(dims::NTuple{1,Int}) = (1:(dims[1]+1),)
+function dimension_indices(dims::NTuple{N,Int}) where {N}
     k = Ref(1)
     @inbounds map(dims) do dᵢ
         curr_k = k[]
-        r = (curr_k:(curr_k + dᵢ))
+        r = (curr_k:(curr_k+dᵢ))
         k[] += dᵢ + 1
         r
     end
@@ -113,12 +122,12 @@ PVector{Int64, 3}:
 ```
 """
 dimension_indices_homvars(z::PVector) = dimension_indices_homvars(dims(z))
-function dimension_indices_homvars(dims::NTuple{N, Int}) where {N}
+function dimension_indices_homvars(dims::NTuple{N,Int}) where {N}
     k = Ref(1) # we need the ref here to make the compiler happy
     @inbounds map(dims) do dᵢ
         curr_k = k[]
         upper = curr_k + dᵢ
-        r = (curr_k:(upper - 1))
+        r = (curr_k:(upper-1))
         k[] += dᵢ + 1
         (r, upper)
     end
@@ -139,7 +148,7 @@ PVector{Int64, 3}:
  (3, 5, 7)
 ```
 """
-function homvars(z::PVector{T, N}) where {T, N}
+function homvars(z::PVector{T,N}) where {T,N}
     k = Ref(1) # we need the ref here to make the compiler happy
     @inbounds map(z.dims) do dᵢ
         curr_k = k[]
@@ -169,10 +178,10 @@ Base.@propagate_inbounds function Base.getindex(z::PVector, i::Integer, j::Integ
     for l = 1:i-1
         k += d[l] + 1
     end
-    z[k + j]
+    z[k+j]
 end
-function Base.checkbounds(z::PVector{T, N}, i, j) where {T, N}
-    if i < 1 || i > N
+function Base.checkbounds(z::PVector{T,N}, i, j) where {T,N}
+    if i < 1 || i > N
         error("Attempt to access product of $N projective spaces at index $i")
     end
     dᵢ = dims(z)[i]
@@ -183,8 +192,8 @@ function Base.checkbounds(z::PVector{T, N}, i, j) where {T, N}
 end
 
 # conversion
-Base.similar(v::PVector, ::Type{T}) where T = PVector(similar(v.data, T), v.dims)
-function Base.convert(::Type{PVector{T, N}}, z::PVector{T1, N}) where {T, N, T1}
+Base.similar(v::PVector, ::Type{T}) where {T} = PVector(similar(v.data, T), v.dims)
+function Base.convert(::Type{PVector{T,N}}, z::PVector{T1,N}) where {T,N,T1}
     PVector(convert(Vector{T}, z.data), z.dims)
 end
 
@@ -194,7 +203,7 @@ end
 
 # show
 Base.show(io::IO, ::MIME"text/plain", z::PVector) = show(io, z)
-function Base.show(io::IO, z::PVector{T, N}) where {T, N}
+function Base.show(io::IO, z::PVector{T,N}) where {T,N}
     if !(get(io, :compact, false))
         print(io, "PVector{$T, $N}:\n ")
     end
@@ -203,7 +212,7 @@ function Base.show(io::IO, z::PVector{T, N}) where {T, N}
             print(io, " × ")
         end
         print(io, "[")
-        for j=1:(dᵢ + 1)
+        for j = 1:(dᵢ+1)
             print(io, z[i, j])
             if j ≤ dᵢ
                 print(io, ", ")
@@ -243,13 +252,13 @@ PVector{Float64, 3}:
   [0.5345224838248488, 0.8017837257372732, 0.2672612419124244] × [0.45291081365783825, 0.5661385170722978, 0.6793662204867574, 0.11322770341445956] × [0.9899494936611666, 0.1414213562373095]
 ```
 """
-function embed(z::AbstractVector{T}, dims::NTuple{N, Int}; normalize=false) where {T, N}
+function embed(z::AbstractVector{T}, dims::NTuple{N,Int}; normalize = false) where {T,N}
     n = sum(dims)
-    data = Vector{T}(undef, n+N)
+    data = Vector{T}(undef, n + N)
     v = PVector(data, dims)
-    embed!(v, z; normalize=normalize)
+    embed!(v, z; normalize = normalize)
 end
-function embed!(v::PVector, z::AbstractVector; normalize=false)
+function embed!(v::PVector, z::AbstractVector; normalize = false)
     dims = v.dims
     n = sum(dims)
     if length(z) == n + length(dims) # assume z has the same layout as v
@@ -284,7 +293,7 @@ function embed!(v::PVector, z::PVector)
     v
 end
 
-function embed(vectors::NTuple{N, <:AbstractVector{T}}; kwargs...) where {T, N}
+function embed(vectors::NTuple{N,<:AbstractVector{T}}; kwargs...) where {T,N}
     data = reduce(vcat, vectors)
     dims = length.(vectors)
     embed(data, dims; kwargs...)
@@ -306,11 +315,12 @@ julia> norm(embed([1, 2, 3, 4, 5]))
 (7.483314773547883,)
 ```
 """
-LinearAlgebra.norm(z::PVector{T, 1}, p::Real=2) where {T} = (LinearAlgebra.norm(z.data, p),)
-@generated function LinearAlgebra.norm(z::PVector{T, N}, p::Real=2) where {T, N}
+LinearAlgebra.norm(z::PVector{T,1}, p::Real = 2) where {T} =
+    (LinearAlgebra.norm(z.data, p),)
+@generated function LinearAlgebra.norm(z::PVector{T,N}, p::Real = 2) where {T,N}
     quote
         r = dimension_indices(z)
-        @inbounds $(Expr(:tuple, (:(_norm_range(z, r[$i], p)) for i=1:N)...))
+        @inbounds $(Expr(:tuple, (:(_norm_range(z, r[$i], p)) for i = 1:N)...))
     end
 end
 
@@ -339,7 +349,7 @@ end
 @inline function _norm_range(z::PVector{<:Complex}, rᵢ::UnitRange{Int}, p::Real) where {T}
     sqrt(_norm_range2(z, rᵢ, p))
 end
-@inline function _norm_range2(z::PVector{T}, rᵢ::UnitRange{Int}, p::Real) where T
+@inline function _norm_range2(z::PVector{T}, rᵢ::UnitRange{Int}, p::Real) where {T}
     normᵢ = zero(real(T))
     if p == 2
         @inbounds for k in rᵢ
@@ -362,11 +372,11 @@ end
 
 Multiply each component of `zᵢ` of `z` by `λ[i]`.
 """
-function LinearAlgebra.rmul!(z::PVector{T, 1}, λ::Number) where {T}
+function LinearAlgebra.rmul!(z::PVector{T,1}, λ::Number) where {T}
     rmul!(z.data, λ)
     z
 end
-function LinearAlgebra.rmul!(z::PVector{T, N}, λ::NTuple{N, <:Number}) where {T, N}
+function LinearAlgebra.rmul!(z::PVector{T,N}, λ::NTuple{N,<:Number}) where {T,N}
     r = dimension_indices(z)
     @inbounds for i = 1:N
         rᵢ, λᵢ = r[i], λ[i]
@@ -382,18 +392,18 @@ end
 
 Normalize each component of `z` separetly.
 """
-function LinearAlgebra.normalize!(z::PVector{T, 1}, p::Real=2) where {T}
+function LinearAlgebra.normalize!(z::PVector{T,1}, p::Real = 2) where {T}
     normalize!(z.data, p)
     z
 end
-LinearAlgebra.normalize!(z::PVector, p::Real=2) = rmul!(z, inv.(LinearAlgebra.norm(z, p)))
+LinearAlgebra.normalize!(z::PVector, p::Real = 2) = rmul!(z, inv.(LinearAlgebra.norm(z, p)))
 
 """
     LinearAlgebra.normalize(z::PVector{T, N}, p::Real=2)::PVector{T,N}
 
 Normalize each component of `z` separetly.
 """
-LinearAlgebra.normalize(z::PVector, p::Real=2) = normalize!(copy(z), p)
+LinearAlgebra.normalize(z::PVector, p::Real = 2) = normalize!(copy(z), p)
 
 """
     affine_chart(z::PVector)
@@ -432,7 +442,7 @@ function affine_chart!(x::AbstractVector, z::PVector{T,N}) where {T,N}
         @boundscheck length(x) >= length(z) - 1
         n = length(z)
         v = inv(z[n])
-        for i=1:n-1
+        for i = 1:n-1
             x[i] = z[i] * v
         end
     else
@@ -448,7 +458,7 @@ function affine_chart!(x::AbstractVector, z::PVector{T,N}) where {T,N}
     x
 end
 
-function affine_chart!(::SVector{M, S}, z::PVector{T, N}) where {M,S,T,N}
+function affine_chart!(::SVector{M,S}, z::PVector{T,N}) where {M,S,T,N}
     x = @MVector zeros(S, M)
     k = 1
     for (rᵢ, hᵢ) in dimension_indices_homvars(z)
@@ -462,7 +472,7 @@ function affine_chart!(::SVector{M, S}, z::PVector{T, N}) where {M,S,T,N}
 end
 
 
-function affine_chart!(z::PVector{T}) where T
+function affine_chart!(z::PVector{T}) where {T}
     k = 1
     for (rᵢ, hᵢ) in dimension_indices_homvars(z)
         normalizer = @fastmath inv(z[hᵢ])
@@ -485,7 +495,7 @@ end
 
 Compute the `p`-norm of `z` on it's affine_chart.
 """
-function norm_affine_chart(z::PVector{T, N}, p::Real=2) where {T, N}
+function norm_affine_chart(z::PVector{T,N}, p::Real = 2) where {T,N}
     # We need to compute for each subrange
     #     ||z[hᵢ]⁻¹z[rᵢ]|| = |z[hᵢ]⁻¹|||z[rᵢ]|| = |z[hᵢ]|⁻¹||z[rᵢ]||
     r = dimension_indices_homvars(z)
@@ -520,21 +530,21 @@ end
 Compute the component wise dot product. If decorated with `@inbounds` the check of the
 [`dims`](@ref) of `v` and `w` is skipped.
 """
-@generated function LinearAlgebra.dot(v::PVector{T, N}, w::PVector{T2, N}) where {T, T2, N}
+@generated function LinearAlgebra.dot(v::PVector{T,N}, w::PVector{T2,N}) where {T,T2,N}
     quote
         @boundscheck checkbounds(v, w)
         r = dimension_indices(v)
-        @inbounds $(Expr(:tuple, (:(_dot_range(v, w, r[$i])) for i=1:N)...))
+        @inbounds $(Expr(:tuple, (:(_dot_range(v, w, r[$i])) for i = 1:N)...))
     end
 end
-@inline function Base.checkbounds(v::PVector{T, N}, w::PVector{T2, N}) where {T, T2, N}
+@inline function Base.checkbounds(v::PVector{T,N}, w::PVector{T2,N}) where {T,T2,N}
     if dims(v) ≠ dims(w)
         error("Dimensions of the vector spaces of the `PVector`s don't agree.")
     end
     true
 end
 
-function LinearAlgebra.dot(v::PVector{<:Number, 1}, w::PVector{<:Number, 1})
+function LinearAlgebra.dot(v::PVector{<:Number,1}, w::PVector{<:Number,1})
     (dot(v.data, w.data),)
 end
 
@@ -543,7 +553,7 @@ end
 
 Compute the dot product of v and w for the indices in rᵢ.
 """
-@inline function _dot_range(v::PVector{T1, N}, w::PVector{T2, N}, rᵢ) where {T1, T2, N}
+@inline function _dot_range(v::PVector{T1,N}, w::PVector{T2,N}, rᵢ) where {T1,T2,N}
     dotᵢ = zero(promote_type(T1, T2))
     @inbounds for k in rᵢ
         dotᵢ += conj(v[k]) * w[k]
@@ -557,14 +567,18 @@ end
 Compute the Fubini-Study distance between `v` and `w` for each component `vᵢ` and `wᵢ`.
 This is defined as ``\\arccos|⟨vᵢ,wᵢ⟩|``.
 """
-@generated function fubini_study(v::PVector{<:Number,N}, w::PVector{<:Number, N}) where N
+@generated function fubini_study(v::PVector{<:Number,N}, w::PVector{<:Number,N}) where {N}
     quote
         Base.@_propagate_inbounds_meta
         r = dimension_indices(v)
-        $(Expr(:tuple, (quote
-            @inbounds rᵢ = r[$i]
-            acos(abs2(_dot_range(v, w, rᵢ)) / (_norm_range2(v, rᵢ, 2) * _norm_range2(w, rᵢ, 2)))
-        end for i=1:N)...))
+        $(Expr(
+            :tuple,
+            (quote
+                @inbounds rᵢ = r[$i]
+                acos(abs2(_dot_range(v, w, rᵢ)) /
+                     (_norm_range2(v, rᵢ, 2) * _norm_range2(w, rᵢ, 2)))
+            end for i = 1:N)...,
+        ))
     end
 end
 
