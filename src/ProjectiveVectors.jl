@@ -258,10 +258,12 @@ There is also an operator version, [`×`](@ref) (written `\times<tab>`).
 
 ## Example
 
+```julia
 julia> v = PVector([1, 2, 3]);
 julia> w = PVector([4, 5]);
 julia> combine(v, w)
 [1 : 2 : 3] × [4 : 5]
+```
 """
 combine(v::PVector, w::PVector) = PVector([data(v);data(w)], tuple(dims(v)..., dims(w)...))
 combine(v::PVector, w::PVector...) = combine(combine(v, first(w)), Base.tail(w)...)
