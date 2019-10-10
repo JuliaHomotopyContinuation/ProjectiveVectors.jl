@@ -78,6 +78,21 @@ function PVector(vectors::NTuple{N,<:AbstractVector{T}}) where {T,N}
 end
 _dim(x::AbstractVector) = length(x) - 1
 
+# broadcasting
+Base.BroadcastStyle(::Type{<:PVector}) = Broadcast.ArrayStyle{PVector}()
+function Base.similar(
+    bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{PVector}},
+    ::Type{ElType},
+) where {ElType}
+    A = find_pvector(bc)
+    PVector(similar(Array{ElType}, length(A)), A.dims)
+end
+find_pvector(bc::Base.Broadcast.Broadcasted) = find_pvector(bc.args)
+find_pvector(args::Tuple) = find_pvector(find_pvector(first(args)), Base.tail(args))
+find_pvector(x) = x
+find_pvector(a::PVector, rest) = a
+find_pvector(::Any, rest) = find_pvector(rest)
+
 """
     data(z::AbstractProjectiveVector)
 
@@ -265,7 +280,7 @@ julia> combine(v, w)
 [1 : 2 : 3] × [4 : 5]
 ```
 """
-combine(v::PVector, w::PVector) = PVector([data(v);data(w)], tuple(dims(v)..., dims(w)...))
+combine(v::PVector, w::PVector) = PVector([data(v); data(w)], tuple(dims(v)..., dims(w)...))
 combine(v::PVector, w::PVector...) = combine(combine(v, first(w)), Base.tail(w)...)
 
 """
@@ -302,7 +317,7 @@ true
 ```
 """
 components(v::PVector{<:Any,1}) = (v,)
-components(v::PVector) = PVector.(getindex.(Ref(v),dimension_indices(v)))
+components(v::PVector) = PVector.(getindex.(Ref(v), dimension_indices(v)))
 
 """
     component(v::PVector{T,N}, i)::PVector{T,1}
@@ -589,9 +604,6 @@ function affine_chart!(z::PVector{T}) where {T}
 end
 
 
-
-
-
 """
      norm_affine_chart(z::PVector, p::Real=2) where {T, N}
 
@@ -674,11 +686,15 @@ This is defined as ``\\arccos|⟨vᵢ,wᵢ⟩|``.
         Base.@_propagate_inbounds_meta
         r = dimension_indices(v)
         $(Expr(
-            :tuple,
+            :call,
+            :+,
             (quote
                 @inbounds rᵢ = r[$i]
-                acos(abs2(_dot_range(v, w, rᵢ)) /
-                     (_norm_range2(v, rᵢ, 2) * _norm_range2(w, rᵢ, 2)))
+                acos(min(
+                    1.0,
+                    abs(_dot_range(v, w, rᵢ)) /
+                    (_norm_range(v, rᵢ, 2) * _norm_range(w, rᵢ, 2)),
+                ))
             end for i = 1:N)...,
         ))
     end
@@ -700,7 +716,7 @@ julia> isreal(v, 1e-6)
 true
 ```
 """
-function Base.isreal(v::PVector{T}, tol::Real) where T
+function Base.isreal(v::PVector{T}, tol::Real) where {T}
     w = normalize(v)
     λ = map(dimension_indices(w)) do rᵢ
         maxᵢ = zero(real(T))

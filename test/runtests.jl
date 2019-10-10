@@ -17,6 +17,11 @@ end
         @test x isa PVector{Int, 3}
         @test dims(x) == (2, 2, 1)
         @test PVector([1, 2, 3], [4, 5, 6], [7, 8]) == x
+
+        # broadcasting
+        @test x .+ 2 == PVector([1, 2, 3, 4, 5, 6, 7, 8] .+ 2, (2, 2, 1))
+        @test complex.(x) isa PVector{Complex{Int64}, 3}
+        @test dims(x) == (2,2,1)
     end
 
     @testset "embed" begin
@@ -104,7 +109,7 @@ end
         @test abs.(dot(z, z)) ≈ (1.0,)
         z = embed(rand(ComplexF64, 6), (2, 4), normalize=true)
         @test abs.(dot(z, z)) ≈ (1.0, 1.0)
-        @test fubini_study(z, z) ≈ (0.0, 0.0)
+        @test fubini_study(z, z) ≈ 0.0
     end
 
     @testset "Componentes" begin
