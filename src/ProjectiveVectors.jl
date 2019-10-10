@@ -80,7 +80,10 @@ _dim(x::AbstractVector) = length(x) - 1
 
 # broadcasting
 Base.BroadcastStyle(::Type{<:PVector}) = Broadcast.ArrayStyle{PVector}()
-function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{PVector}}, ::Type{ElType}) where ElType
+function Base.similar(
+    bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{PVector}},
+    ::Type{ElType},
+) where {ElType}
     A = find_pvector(bc)
     PVector(similar(Array{ElType}, length(A)), A.dims)
 end
@@ -277,7 +280,7 @@ julia> combine(v, w)
 [1 : 2 : 3] × [4 : 5]
 ```
 """
-combine(v::PVector, w::PVector) = PVector([data(v);data(w)], tuple(dims(v)..., dims(w)...))
+combine(v::PVector, w::PVector) = PVector([data(v); data(w)], tuple(dims(v)..., dims(w)...))
 combine(v::PVector, w::PVector...) = combine(combine(v, first(w)), Base.tail(w)...)
 
 """
@@ -314,7 +317,7 @@ true
 ```
 """
 components(v::PVector{<:Any,1}) = (v,)
-components(v::PVector) = PVector.(getindex.(Ref(v),dimension_indices(v)))
+components(v::PVector) = PVector.(getindex.(Ref(v), dimension_indices(v)))
 
 """
     component(v::PVector{T,N}, i)::PVector{T,1}
@@ -687,8 +690,11 @@ This is defined as ``\\arccos|⟨vᵢ,wᵢ⟩|``.
             :+,
             (quote
                 @inbounds rᵢ = r[$i]
-                acos(min(1.0, abs(_dot_range(v, w, rᵢ)) /
-                     (_norm_range(v, rᵢ, 2) * _norm_range(w, rᵢ, 2))))
+                acos(min(
+                    1.0,
+                    abs(_dot_range(v, w, rᵢ)) /
+                    (_norm_range(v, rᵢ, 2) * _norm_range(w, rᵢ, 2)),
+                ))
             end for i = 1:N)...,
         ))
     end
@@ -710,7 +716,7 @@ julia> isreal(v, 1e-6)
 true
 ```
 """
-function Base.isreal(v::PVector{T}, tol::Real) where T
+function Base.isreal(v::PVector{T}, tol::Real) where {T}
     w = normalize(v)
     λ = map(dimension_indices(w)) do rᵢ
         maxᵢ = zero(real(T))
