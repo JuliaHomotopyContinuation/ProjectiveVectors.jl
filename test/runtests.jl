@@ -17,6 +17,11 @@ end
         @test x isa PVector{Int, 3}
         @test dims(x) == (2, 2, 1)
         @test PVector([1, 2, 3], [4, 5, 6], [7, 8]) == x
+
+        # broadcasting
+        @test x .+ 2 == PVector([1, 2, 3, 4, 5, 6, 7, 8] .+ 2, (2, 2, 1))
+        @test complex.(x) isa PVector{Complex{Int64}, 3}
+        @test dims(x) == (2,2,1)
     end
 
     @testset "embed" begin

@@ -78,6 +78,18 @@ function PVector(vectors::NTuple{N,<:AbstractVector{T}}) where {T,N}
 end
 _dim(x::AbstractVector) = length(x) - 1
 
+# broadcasting
+Base.BroadcastStyle(::Type{<:PVector}) = Broadcast.ArrayStyle{PVector}()
+function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{PVector}}, ::Type{ElType}) where ElType
+    A = find_pvector(bc)
+    PVector(similar(Array{ElType}, length(A)), A.dims)
+end
+find_pvector(bc::Base.Broadcast.Broadcasted) = find_pvector(bc.args)
+find_pvector(args::Tuple) = find_pvector(find_pvector(first(args)), Base.tail(args))
+find_pvector(x) = x
+find_pvector(a::PVector, rest) = a
+find_pvector(::Any, rest) = find_pvector(rest)
+
 """
     data(z::AbstractProjectiveVector)
 
@@ -587,9 +599,6 @@ function affine_chart!(z::PVector{T}) where {T}
     end
     z
 end
-
-
-
 
 
 """
