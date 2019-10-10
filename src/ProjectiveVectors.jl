@@ -674,11 +674,12 @@ This is defined as ``\\arccos|⟨vᵢ,wᵢ⟩|``.
         Base.@_propagate_inbounds_meta
         r = dimension_indices(v)
         $(Expr(
-            :tuple,
+            :call,
+            :+,
             (quote
                 @inbounds rᵢ = r[$i]
-                acos(abs2(_dot_range(v, w, rᵢ)) /
-                     (_norm_range2(v, rᵢ, 2) * _norm_range2(w, rᵢ, 2)))
+                acos(min(1.0, abs(_dot_range(v, w, rᵢ)) /
+                     (_norm_range(v, rᵢ, 2) * _norm_range(w, rᵢ, 2))))
             end for i = 1:N)...,
         ))
     end
