@@ -720,7 +720,7 @@ function Base.isreal(v::PVector{T}, tol::Real) where {T}
     w = normalize(v)
     λ = map(dimension_indices(w)) do rᵢ
         maxᵢ = zero(real(T))
-        max_ind = 0
+        max_ind = 1
         for i in rᵢ
             wᵢ = abs(w[i])
             if wᵢ > maxᵢ
