@@ -463,7 +463,7 @@ Compute the `p`-norm of `z` for the indices in `rᵢ`.
     end
     normᵢ
 end
-@inline function _norm_range(z::PVector{<:Complex}, rᵢ::UnitRange{Int}, p::Real) where {T}
+@inline function _norm_range(z::PVector{<:Complex}, rᵢ::UnitRange{Int}, p::Real)
     sqrt(_norm_range2(z, rᵢ, p))
 end
 @inline function _norm_range2(z::PVector{T}, rᵢ::UnitRange{Int}, p::Real) where {T}
